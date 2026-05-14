@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, Loader2, Upload, X } from 'lucide-react';
 
 export default function AddProductPage() {
-  const {  session, status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
