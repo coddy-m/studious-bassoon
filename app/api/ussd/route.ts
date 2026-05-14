@@ -5,7 +5,10 @@ import Product from '@/models/Product';
 import Order from '@/models/Order';
 import { formatPhone, generateId } from '@/lib/utils';
 import { stkPush } from '@/lib/mpesa';
-import { getUSSDSession, setUSSDSession } from '@/lib/redis';
+
+const ussdSessions = new Map();
+const getUSSDSession = (sessionId: string) => ussdSessions.get(sessionId);
+const setUSSDSession = (sessionId: string, data: any) => ussdSessions.set(sessionId, data);
 
 export async function POST(req: NextRequest) {
   try {
