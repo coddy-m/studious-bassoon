@@ -9,19 +9,19 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/dashboard',
     display: 'standalone',
     background_color: '#ffffff',
-    theme_color: '#16a34a', // Matches your green theme
+    theme_color: '#16a34a',
     icons: [
       {
         src: '/icon.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'any maskable',
+        purpose: 'maskable', // ✅ Fixed: Next.js expects single value
       },
       {
         src: '/icon.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any maskable',
+        purpose: 'maskable', // ✅ Fixed
       },
     ],
   };
