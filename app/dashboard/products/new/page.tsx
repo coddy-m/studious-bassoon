@@ -1,16 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Upload, X } from 'lucide-react';
 
-export const dynamic ='force-dynamic';  // ✅ ADD THIS EXACT LINE HERE
+// ✅ Force dynamic rendering (prevents static generation)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default function AddProductPage() {
-  const { data: session, status } = useSession();
+  const {  session, status } = useSession();
   const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -24,7 +27,20 @@ export default function AddProductPage() {
     images: [] as string[],
   });
 
-  if (status === 'loading') {
+  // ✅ Only run client-side code after mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // ✅ Redirect if not authenticated (client-side only)
+  useEffect(() => {
+    if (isClient && status === 'unauthenticated') {
+      router.push('/seller/start');
+    }
+  }, [isClient, status, router]);
+
+  // ✅ Show loading while checking auth or before client mount
+  if (!isClient || status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="animate-spin" size={32} />
@@ -32,8 +48,8 @@ export default function AddProductPage() {
     );
   }
 
+  // ✅ If not authenticated, show nothing (redirect will happen)
   if (status === 'unauthenticated') {
-    router.push('/seller/start');
     return null;
   }
 
