@@ -1,9 +1,6 @@
 // app/dashboard/products/new/page.tsx
 import dynamic from 'next/dynamic';
 
-// ✅ Force dynamic rendering at the page level
-export const dynamic = 'force-dynamic';
-
 // ✅ Dynamically import the form with SSR disabled
 // This guarantees the component ONLY runs in the browser
 const AddProductForm = dynamic(
