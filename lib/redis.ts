@@ -1,22 +1,24 @@
-import Redis from 'ioredis';
+// lib/redis.ts
+//import Redis from 'ioredis'; // or your redis package
 
-let redisInstance: Redis | null = null;
+let client: Redis | null = null;
 
-export function getRedis(): Redis {
-  if (!redisInstance) {
-    redisInstance = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+export function getRedis() {
+  // Only connect if we haven't already
+  if (!client) {
+    // If REDIS_URL is not set, return null so the build doesn't crash
+    if (!process.env.REDIS_URL) {
+      console.warn('REDIS_URL is not defined. Redis connection skipped.');
+      return null;
+    }
+
+    try {
+      client = new Redis(process.env.REDIS_URL);
+      console.log('Redis connected successfully');
+    } catch (error) {
+      console.error('Failed to connect to Redis:', error);
+      client = null;
+    }
   }
-  return redisInstance;
-}
-
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-export const redis = new Redis(REDIS_URL);
-
-export async function getUSSDSession(sessionId: string): Promise<any> {
-  const data = await redis.get(`ussd:${sessionId}`);
-  return data ? JSON.parse(data) : null;
-}
-
-export async function setUSSDSession(sessionId: string, data: any, ttl = 300): Promise<void> {
-  await redis.setex(`ussd:${sessionId}`, ttl, JSON.stringify(data));
+  return client;
 }
