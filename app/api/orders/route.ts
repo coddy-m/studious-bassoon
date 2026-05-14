@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // ✅ MUST import this
+import { authOptions } from '@/lib/auth-options'; // ✅ MUST import this
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Seller from '@/models/Seller';

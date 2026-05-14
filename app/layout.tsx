@@ -1,18 +1,33 @@
+// app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css';
-import { Providers } from '@/components/Providers';
 
 export const metadata: Metadata = {
-  title: 'MtaaDuka - Sell on WhatsApp',
-  description: 'Your shop link, M-Pesa checkout, zero hassle.',
+  title: 'MtaaDuka',
+  description: 'Your neighborhood marketplace',
+  manifest: '/manifest.json',
+  themeColor: '#16a34a',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'MtaaDuka',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased">
-        <Providers>{children}</Providers>
-      </body>
+      <body className="bg-gray-50 antialiased">{children}</body>
     </html>
   );
 }
