@@ -1,5 +1,7 @@
 // lib/auth-options.ts
+import { AuthOptions, SessionStrategy } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { JWT } from 'next-auth/jwt';
 import connectDB from '@/lib/mongodb';
 import Seller from '@/models/Seller';
 import { formatPhone, generateShopId } from '@/lib/utils';
@@ -9,7 +11,7 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'PhoneOTP',
@@ -23,39 +25,26 @@ export const authOptions = {
         category: { label: 'Category', type: 'text' },
         action: { label: 'Action', type: 'text' },
       },
-      async authorize(credentials) {
-        console.log('=== AUTH DEBUG ===');
-        console.log('Action:', credentials?.action);
-        console.log('Phone:', credentials?.phone);
-        
-        if (!credentials?.phone) {
-          console.log('ERROR: No phone provided');
-          return null;
-        }
+      async authorize(credentials): Promise<any> {
+        if (!credentials?.phone) return null;
         
         const phone = formatPhone(credentials.phone);
-        console.log('Formatted phone:', phone);
         
         try {
           await connectDB();
-          console.log('MongoDB connected');
         } catch (err) {
-          console.log('MongoDB connection FAILED:', err);
+          console.error('MongoDB connection error:', err);
           return null;
         }
         
         let seller = await Seller.findOne({ phone });
-        console.log('Seller found:', seller ? 'YES' : 'NO');
 
         if (credentials.action === 'request_otp') {
           const otp = generateOTP();
           const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
-          console.log('Generated OTP:', otp);
           
           if (!seller) {
-            console.log('Creating new seller...');
             if (!credentials.name || !credentials.businessName || !credentials.location) {
-              console.log('ERROR: Missing required fields for new seller');
               return null;
             }
             try {
@@ -71,13 +60,11 @@ export const authOptions = {
                 otp,
                 otpExpiry,
               });
-              console.log('Seller created with ID:', seller._id);
-            } catch (err: any) {
-              console.log('Seller creation FAILED:', err.message);
+            } catch (err) {
+              console.error('Seller creation error:', err);
               return null;
             }
           } else {
-            console.log('Updating existing seller OTP...');
             seller.otp = otp;
             seller.otpExpiry = otpExpiry;
             await seller.save();
@@ -85,60 +72,45 @@ export const authOptions = {
 
           try {
             await sendSMS(phone, `MtaaDuka code: ${otp}. Valid 10 mins.`);
-            console.log('SMS sent successfully');
           } catch (err) {
-            console.log('SMS failed (sandbox mode OK):', err);
+            console.log('SMS failed (sandbox OK):', err);
           }
           
-          return { id: seller._id.toString(), phone, name: seller.name, shopId: seller.shopId, requiresOTP: true } as any;
+          return { id: seller._id.toString(), phone, name: seller.name, shopId: seller.shopId, requiresOTP: true };
         }
 
         if (credentials.action === 'verify_otp') {
-          console.log('Verifying OTP...');
-          console.log('Seller exists:', !!seller);
-          console.log('OTP expiry:', seller?.otpExpiry);
-          console.log('Current time:', new Date());
-          
-          if (!seller) {
-            console.log('ERROR: Seller not found during verify');
-            return null;
-          }
-          if (!seller.otpExpiry || seller.otpExpiry < new Date()) {
-            console.log('ERROR: OTP expired');
+          if (!seller || !seller.otpExpiry || seller.otpExpiry < new Date()) {
             return null;
           }
           
           const otpValid = seller.compareOTP(credentials.otp);
-          console.log('OTP valid:', otpValid);
-          
-          if (!otpValid) {
-            console.log('ERROR: Wrong OTP');
-            return null;
-          }
+          if (!otpValid) return null;
           
           seller.verified = true;
           seller.otp = undefined;
           await seller.save();
-          console.log('Seller verified successfully');
           
           return { id: seller._id.toString(), phone: seller.phone, name: seller.name, shopId: seller.shopId, role: 'seller' };
         }
 
-        console.log('ERROR: Unknown action');
         return null;
       },
     }),
   ],
-  session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
+  session: { 
+    strategy: 'jwt' as SessionStrategy,  // ✅ Explicit type cast
+    maxAge: 30 * 24 * 60 * 60 
+  },
   callbacks: {
-    async jwt({ token, user }: { token: any; user: any }) {
+    async jwt({ token, user }: { token: JWT; user: any }): Promise<JWT> {
       if (user) {
         token.shopId = user.shopId;
         token.phone = user.phone;
       }
       return token;
     },
-    async session({ session, token }: { session: any; token: any }) {
+    async session({ session, token }: { session: any; token: JWT }): Promise<any> {
       if (session.user) {
         session.user.id = token.sub as string;
         session.user.shopId = token.shopId;
