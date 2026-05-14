@@ -7,6 +7,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+
+  trailingSlash: false,
   // ✅ CRITICAL: Disable static export entirely
   // This forces all pages to render on-demand (SSR), preventing prerender crashes
   output: 'standalone',
