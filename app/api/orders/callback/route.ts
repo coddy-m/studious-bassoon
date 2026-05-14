@@ -6,10 +6,22 @@ import Seller from '@/models/Seller';
 import { sendWhatsApp } from '@/lib/at';
 import { b2cPayout } from '@/lib/mpesa';
 import { Queue } from 'bullmq';
-import IORedis from 'ioredis';
 
-const redis = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
-const notificationQueue = new Queue('notifications', { connection: redis });
+
+let notificationQueue: any = null;
+
+// Only initialize queue if Redis is actually configured
+if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
+  try {
+    const IORedis = require('ioredis');
+    const { Queue } = require('bullmq'); // or your queue library
+    const redis = new IORedis(process.env.REDIS_URL);
+    notificationQueue = new Queue('notifications', { connection: redis });
+  } catch (err) {
+    console.warn('Redis/BullMQ not available, notifications disabled:', err);
+  }
+}
+
 
 export async function POST(req: NextRequest) {
   try {
