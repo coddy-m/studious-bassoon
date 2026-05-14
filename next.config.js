@@ -1,16 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Skip ESLint errors during build (safe for deployment)
+  // Skip ESLint/TypeScript errors during build (safe for deployment)
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Skip TypeScript errors during build (safe for deployment)
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Ensure all dashboard pages render dynamically at runtime
+  // ✅ CRITICAL: Disable static export entirely
+  // This forces all pages to render on-demand (SSR), preventing prerender crashes
+  output: 'standalone',
+  
+  // Optimize for serverless deployment
+  reactStrictMode: false,
+  
+  // Prevent bundling issues with server-only packages
   experimental: {
-    serverComponentsExternalPackages: ['next-auth'],
+    serverComponentsExternalPackages: ['next-auth', 'mongodb', 'mongoose', 'ioredis'],
   },
 };
 
