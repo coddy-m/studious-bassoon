@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     if (shopId) {
       const seller = await Seller.findOne({ shopId }).lean();
       if (!seller) return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
-      const products = await Product.find({ sellerId: seller._id as any, active: true }).lean();
+      const products = await Product.find({ sellerId: (seller as any)._id, active: true }).lean();
       return NextResponse.json({ seller, products });
     }
 
