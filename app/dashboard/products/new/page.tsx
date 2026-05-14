@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Upload, X } from 'lucide-react';
 
-export const dynamic ='force-dynamic';
+export const dynamic ='force-dynamic';  // ✅ ADD THIS EXACT LINE HERE
 
 export default function AddProductPage() {
   const { data: session, status } = useSession();
