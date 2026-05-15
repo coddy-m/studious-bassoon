@@ -3,9 +3,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, SessionProvider } from 'next-auth/react';
 
-export default function RegisterForm() {
+function RegisterFormInner() {
   const router = useRouter();
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
   const [loading, setLoading] = useState(false);
@@ -62,5 +62,13 @@ export default function RegisterForm() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterForm() {
+  return (
+    <SessionProvider>
+      <RegisterFormInner />
+    </SessionProvider>
   );
 }

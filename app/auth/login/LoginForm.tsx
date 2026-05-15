@@ -3,9 +3,9 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, SessionProvider } from 'next-auth/react';
 
-export default function LoginForm() {
+function LoginFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectRole = searchParams.get('role');
@@ -55,5 +55,14 @@ export default function LoginForm() {
         </p>
       </div>
     </div>
+  );
+}
+
+// ✅ SessionProvider wrapped around the inner component
+export default function LoginForm() {
+  return (
+    <SessionProvider>
+      <LoginFormInner />
+    </SessionProvider>
   );
 }
