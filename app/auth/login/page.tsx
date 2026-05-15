@@ -1,13 +1,14 @@
 // app/auth/login/page.tsx
 'use client';
 
+// ✅ CRITICAL: This export MUST be at module level (top of file) to prevent static generation
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { SessionProvider } from 'next-auth/react';
-
-// ✅ CRITICAL: Prevent static generation (required for useSearchParams)
-export const dynamic = 'force-dynamic';
 
 function LoginForm() {
   const router = useRouter();
