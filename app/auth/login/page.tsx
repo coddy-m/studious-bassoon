@@ -6,6 +6,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { SessionProvider } from 'next-auth/react';
 
+// ✅ CRITICAL: Prevent static generation (required for useSearchParams)
+export const dynamic = 'force-dynamic';
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,7 +31,6 @@ function LoginForm() {
     if (res?.error) {
       setError(res.error);
     } else {
-      // Redirect based on role or default to marketplace
       router.push(redirectRole === 'seller' ? '/dashboard' : '/products');
     }
     setLoading(false);
@@ -48,44 +50,26 @@ function LoginForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input 
-              name="email" 
-              type="email" 
-              placeholder="you@example.com" 
-              required 
-              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" 
-            />
+            <input name="email" type="email" required className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input 
-              name="password" 
-              type="password" 
-              placeholder="••••••••" 
-              required 
-              className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" 
-            />
+            <input name="password" type="password" required className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-green-500" />
           </div>
-          <button 
-            disabled={loading} 
-            className="w-full bg-green-600 text-white font-medium p-3 rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
-          >
+          <button disabled={loading} className="w-full bg-green-600 text-white font-medium p-3 rounded-lg hover:bg-green-700 disabled:opacity-50 transition">
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
         
         <p className="mt-6 text-center text-sm text-gray-600">
           New here?{' '}
-          <a href="/auth/register" className="text-green-600 font-medium hover:underline">
-            Create Account
-          </a>
+          <a href="/auth/register" className="text-green-600 font-medium hover:underline">Create Account</a>
         </p>
       </div>
     </div>
   );
 }
 
-// Wrap with SessionProvider locally
 export default function LoginPage() {
   return (
     <SessionProvider>
