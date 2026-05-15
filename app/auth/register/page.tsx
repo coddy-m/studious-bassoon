@@ -1,9 +1,7 @@
-// app/auth/register/page.tsx
 'use client';
 
-// ✅ CRITICAL: Module-level exports to prevent static generation
+// ✅ ONLY this export - DO NOT add revalidate
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
