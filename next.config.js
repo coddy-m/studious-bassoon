@@ -1,24 +1,29 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Skip ESLint/TypeScript errors during build (safe for deployment)
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // ✅ Skip TypeScript errors during Vercel build (safe for deployment)
   typescript: {
     ignoreBuildErrors: true,
   },
-
-  trailingSlash: false,
-  // ✅ CRITICAL: Disable static export entirely
-  // This forces all pages to render on-demand (SSR), preventing prerender crashes
+  // ✅ Skip ESLint errors during build
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // ✅ Optimize for Vercel serverless
   output: 'standalone',
-  
-  // Optimize for serverless deployment
-  reactStrictMode: false,
-  
-  // Prevent bundling issues with server-only packages
-  experimental: {
-    serverComponentsExternalPackages: ['next-auth', 'mongodb', 'mongoose', 'ioredis'],
+  // ✅ Fix trailing slash issues
+  trailingSlash: false,
+  // ✅ Security headers
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+        ],
+      },
+    ];
   },
 };
 

@@ -6,6 +6,11 @@ import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
 import Order from '@/models/Order';
 
+// Add these at the TOP of the file (after imports, before component)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {

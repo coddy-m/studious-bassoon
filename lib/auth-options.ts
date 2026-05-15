@@ -1,124 +1,98 @@
 // lib/auth-options.ts
-import { AuthOptions, SessionStrategy } from 'next-auth';
+import { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { JWT } from 'next-auth/jwt';
 import connectDB from '@/lib/mongodb';
-import Seller from '@/models/Seller';
-import { formatPhone, generateShopId } from '@/lib/utils';
-import { sendSMS } from '@/lib/at';
-
-function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import User from '@/models/User';
+import { generateShopId } from '@/lib/utils';
+import { sanitizeUserInput } from '@/lib/validators';
 
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
-      name: 'PhoneOTP',
+      name: 'Email & Password',
       credentials: {
-        phone: { label: 'Phone', type: 'text' },
-        otp: { label: 'OTP', type: 'text' },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
         name: { label: 'Name', type: 'text' },
-        businessName: { label: 'Business', type: 'text' },
+        phone: { label: 'Phone', type: 'text' },
+        role: { label: 'Role', type: 'text' },
+        businessName: { label: 'Business Name', type: 'text' },
         location: { label: 'Location', type: 'text' },
-        county: { label: 'County', type: 'text' },
-        category: { label: 'Category', type: 'text' },
-        action: { label: 'Action', type: 'text' },
       },
       async authorize(credentials): Promise<any> {
-        if (!credentials?.phone) return null;
-        
-        const phone = formatPhone(credentials.phone);
-        
-        try {
-          await connectDB();
-        } catch (err) {
-          console.error('MongoDB connection error:', err);
-          return null;
-        }
-        
-        let seller = await Seller.findOne({ phone });
+        await connectDB();
+        const clean = sanitizeUserInput(credentials);
 
-        if (credentials.action === 'request_otp') {
-          const otp = generateOTP();
-          const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
-          
-          if (!seller) {
-            if (!credentials.name || !credentials.businessName || !credentials.location) {
-              return null;
-            }
-            try {
-              seller = await Seller.create({
-                phone,
-                name: credentials.name,
-                businessName: credentials.businessName,
-                mpesaNumber: phone,
-                location: credentials.location,
-                county: credentials.county || 'Nairobi',
-                category: credentials.category || 'other',
-                shopId: generateShopId(credentials.businessName),
-                otp,
-                otpExpiry,
-              });
-            } catch (err) {
-              console.error('Seller creation error:', err);
-              return null;
-            }
-          } else {
-            seller.otp = otp;
-            seller.otpExpiry = otpExpiry;
-            await seller.save();
-          }
+        // 📝 REGISTRATION FLOW (when name + phone are provided)
+        if (credentials?.name && credentials?.phone) {
+          const existing = await User.findOne({ email: clean.email });
+          if (existing) throw new Error('Email already registered');
 
-          try {
-            await sendSMS(phone, `MtaaDuka code: ${otp}. Valid 10 mins.`);
-          } catch (err) {
-            console.log('SMS failed (sandbox OK):', err);
-          }
-          
-          return { id: seller._id.toString(), phone, name: seller.name, shopId: seller.shopId, requiresOTP: true };
+          const user = await User.create({
+            email: clean.email,
+            password: clean.password,
+            name: clean.name,
+            phone: clean.phone,
+            role: credentials.role || 'buyer',
+            ...(credentials.role === 'seller' && {
+              businessName: credentials.businessName,
+              location: credentials.location,
+              county: 'Nairobi',
+              category: 'other',
+              shopId: generateShopId(credentials.businessName),
+              verified: true,
+            }),
+          });
+
+          return { id: user._id.toString(), email: user.email, role: user.role, phone: user.phone };
         }
 
-        if (credentials.action === 'verify_otp') {
-          if (!seller || !seller.otpExpiry || seller.otpExpiry < new Date()) {
-            return null;
-          }
-          
-          const otpValid = seller.compareOTP(credentials.otp);
-          if (!otpValid) return null;
-          
-          seller.verified = true;
-          seller.otp = undefined;
-          await seller.save();
-          
-          return { id: seller._id.toString(), phone: seller.phone, name: seller.name, shopId: seller.shopId, role: 'seller' };
+        // 🔑 LOGIN FLOW (email + password only)
+        if (!clean.email || !clean.password) {
+          throw new Error('Email and password required');
         }
 
-        return null;
+        const user = await User.findOne({ email: clean.email });
+        if (!user) throw new Error('User not found');
+
+        const isValid = await user.comparePassword(clean.password);
+        if (!isValid) throw new Error('Invalid password');
+
+        return { id: user._id.toString(), email: user.email, role: user.role, phone: user.phone, name: user.name };
       },
     }),
   ],
-  session: { 
-    strategy: 'jwt' as SessionStrategy,  // ✅ Explicit type cast
-    maxAge: 30 * 24 * 60 * 60 
+  session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
   },
+  jwt: { secret: process.env.NEXTAUTH_SECRET },
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user: any }): Promise<JWT> {
+    async jwt({ token, user }: { token: any; user: any }) {
       if (user) {
-        token.shopId = user.shopId;
+        token.role = user.role;
         token.phone = user.phone;
+        token.email = user.email;
       }
       return token;
     },
-    async session({ session, token }: { session: any; token: JWT }): Promise<any> {
+    async session({ session, token }: { session: any; token: any }) {
       if (session.user) {
-        session.user.id = token.sub as string;
-        session.user.shopId = token.shopId;
+        session.user.id = token.sub;
+        session.user.role = token.role;
         session.user.phone = token.phone;
+        session.user.email = token.email;
       }
       return session;
     },
   },
-  pages: { signIn: '/seller/start', error: '/seller/start' },
-  debug: true,
+  pages: { signIn: '/auth/login' },
 };

@@ -1,32 +1,19 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose from 'mongoose';
 
-export interface IProduct extends Document {
-  productId: string;
-  sellerId: mongoose.Types.ObjectId;
-  name: string;
-  description?: string;
-  price: number;
-  comparePrice?: number;
-  images: string[];
-  stock: number;
-  sold: number;
-  category: string;
-  active: boolean;
-  createdAt: Date;
-}
-
-const ProductSchema = new Schema<IProduct>({
-  productId: { type: String, unique: true, required: true, index: true },
-  sellerId: { type: Schema.Types.ObjectId, ref: 'Seller', required: true, index: true },
-  name: { type: String, required: true },
-  description: { type: String },
-  price: { type: Number, required: true },
-  comparePrice: { type: Number },
+const ProductSchema = new mongoose.Schema({
+  productId: { type: String, required: true, unique: true, index: true },
+  sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  name: { type: String, required: true, trim: true, maxlength: 200 },
+  price: { type: Number, required: true, min: 0 },
+  stock: { type: Number, required: true, min: 0, default: 0 },
+  description: { type: String, trim: true, maxlength: 2000 },
+  category: { type: String, enum: ['fruits','vegetables','dairy','groceries','meat','beverages','other'], default: 'other', index: true },
   images: [{ type: String }],
-  stock: { type: Number, default: 1 },
-  sold: { type: Number, default: 0 },
-  category: { type: String, required: true },
-  active: { type: Boolean, default: true },
+  active: { type: Boolean, default: true, index: true },
 }, { timestamps: true });
 
-export default mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
+// 🚀 Compound indexes for high-traffic queries
+ProductSchema.index({ sellerId: 1, active: 1 });
+ProductSchema.index({ category: 1, active: 1, createdAt: -1 });
+
+export default mongoose.models.Product || mongoose.model('Product', ProductSchema);

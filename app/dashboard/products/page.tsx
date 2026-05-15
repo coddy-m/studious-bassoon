@@ -5,6 +5,8 @@ import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
 import ProductsClient from './ProductsClient';
 
+
+
 export default async function ProductsPage() {
   // 1. Check Auth on Server
   const session = await getServerSession(authOptions);

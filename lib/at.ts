@@ -1,48 +1,81 @@
-import axios from 'axios';
+// lib/at.ts
 
-const USERNAME = process.env.AT_USERNAME;
-const API_KEY = process.env.AT_API_KEY;
+interface SMSResponse {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
 
-async function atRequest(endpoint: string, data: URLSearchParams) {
-  const url = `https://api.africastalking.com/version1/${endpoint}`;
+export async function sendSMS(phone: string, message: string): Promise<SMSResponse> {
+  //  Development/Sandbox Mode: Log to console instead of sending
+  if (process.env.NODE_ENV === 'development' || process.env.AT_SANDBOX === 'true') {
+    console.log('📱 [SMS SANDBOX MODE]');
+    console.log('To:', phone);
+    console.log('Message:', message);
+    console.log('---');
+    return { success: true, messageId: 'sandbox-test-mode' };
+  }
+
+  // ✅ Production Mode: Send real SMS via Africa's Talking
   try {
-    const res = await axios.post(url, data.toString(), {
+    // Validate required environment variables
+    const username = process.env.AT_USERNAME;
+    const apiKey = process.env.AT_API_KEY;
+    
+    if (!username || !apiKey) {
+      console.error('❌ Africa\'s Talking credentials missing');
+      return { 
+        success: false, 
+        error: 'SMS configuration error: Missing credentials' 
+      };
+    }
+
+    const params = new URLSearchParams();
+    params.append('username', username);
+    params.append('to', phone);
+    params.append('message', message);
+    if (process.env.AT_SHORTCODE) {
+      params.append('from', process.env.AT_SHORTCODE);
+    }
+
+    const response = await fetch('https://api.africastalking.com/version1/messaging', {
+      method: 'POST',
       headers: {
+        'ApiKey': apiKey,
         'Content-Type': 'application/x-www-form-urlencoded',
-        apiKey: API_KEY,
+        'Accept': 'application/json',
       },
+      body: params,
     });
-    return res.data;
-  } catch (err: any) {
-    console.error('AT Error:', err.response?.data || err.message);
-    throw err;
+
+    const result = await response.json();
+    
+    // Check for Africa's Talking API errors
+    if (result.errorMessage) {
+      console.error('📱 Africa\'s Talking API Error:', result.errorMessage);
+      return { 
+        success: false, 
+        error: result.errorMessage 
+      };
+    }
+
+    // Success response
+    console.log('✅ SMS sent successfully:', result);
+    return { 
+      success: true, 
+      messageId: result.SMSMessageData?.Recipients?.[0]?.messageId || 'unknown' 
+    };
+
+  } catch (error) {
+    console.error('📱 SMS API Request Failed:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error sending SMS' 
+    };
   }
 }
 
-export async function sendSMS(to: string, message: string, from = 'MtaaDuka') {
-  if (!USERNAME || USERNAME === 'sandbox') {
-    console.log(`[SANDBOX SMS to ${to}]: ${message}`);
-    return { success: true };
-  }
-  const data = new URLSearchParams({
-    username: USERNAME,
-    to: to.startsWith('+') ? to : `+${to}`,
-    message,
-    from,
-  });
-  return atRequest('messaging', data);
-}
-
-export async function sendWhatsApp(to: string, message: string) {
-  if (!USERNAME || USERNAME === 'sandbox') {
-    console.log(`[SANDBOX WhatsApp to ${to}]: ${message}`);
-    return { success: true };
-  }
-  const data = new URLSearchParams({
-    username: USERNAME,
-    to: to.startsWith('+') ? to : `+${to}`,
-    message,
-    channel: 'whatsapp',
-  });
-  return atRequest('messaging', data);
+// 🧪 Test function to verify SMS configuration
+export async function testSMSConnection(phone: string): Promise<SMSResponse> {
+  return await sendSMS(phone, 'MtaaDuka: SMS integration test successful! ✅');
 }

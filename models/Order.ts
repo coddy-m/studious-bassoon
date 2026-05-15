@@ -1,54 +1,18 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose from 'mongoose';
 
-export type OrderStatus = 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
-
-export interface IOrderItem {
-  productId: mongoose.Types.ObjectId;
-  name: string;
-  price: number;
-  quantity: number;
-  variant?: string;
-}
-
-export interface IOrder extends Document {
-  orderId: string;
-  sellerId: mongoose.Types.ObjectId;
-  buyerPhone: string;
-  buyerName?: string;
-  items: IOrderItem[];
-  total: number;
-  deliveryFee: number;
-  platformFee: number;
-  sellerPayout: number;
-  status: OrderStatus;
-  mpesaRef?: string;
-  checkoutRequestId?: string;
-  deliveryLocation?: string;
-  deliveryNotes?: string;
-  createdAt: Date;
-}
-
-const OrderSchema = new Schema<IOrder>({
-  orderId: { type: String, unique: true, required: true, index: true },
-  sellerId: { type: Schema.Types.ObjectId, ref: 'Seller', required: true, index: true },
-  buyerPhone: { type: String, required: true },
-  buyerName: { type: String },
-  items: [{
-    productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
-    name: { type: String, required: true },
-    price: { type: Number, required: true },
-    quantity: { type: Number, required: true },
-    variant: { type: String },
-  }],
-  total: { type: Number, required: true },
-  deliveryFee: { type: Number, default: 0 },
-  platformFee: { type: Number, required: true },
-  sellerPayout: { type: Number, required: true },
-  status: { type: String, enum: ['pending','paid','processing','shipped','delivered','cancelled','refunded'], default: 'pending' },
-  mpesaRef: { type: String },
-  checkoutRequestId: { type: String },
-  deliveryLocation: { type: String },
-  deliveryNotes: { type: String },
+const OrderSchema = new mongoose.Schema({
+  orderId: { type: String, required: true, unique: true, index: true },
+  buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  quantity: { type: Number, required: true, min: 1 },
+  totalAmount: { type: Number, required: true, min: 0 },
+  status: { type: String, enum: ['pending', 'paid', 'shipped', 'completed', 'cancelled'], default: 'pending', index: true },
+  mpesaReceipt: { type: String, trim: true },
+  phone: { type: String, required: true, trim: true }, // For STK push
 }, { timestamps: true });
 
-export default mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
+OrderSchema.index({ buyerId: 1, status: 1 });
+OrderSchema.index({ sellerId: 1, createdAt: -1 });
+
+export default mongoose.models.Order || mongoose.model('Order', OrderSchema);
