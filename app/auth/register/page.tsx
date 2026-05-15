@@ -1,1 +1,18 @@
-'use client';export const dynamic='force-dynamic';import{useState}from'react';import{useRouter}from'next/navigation';import{signIn}from'next-auth/react';import{SessionProvider}from'next-auth/react';function RegisterForm(){const router=useRouter();const[role,setRole]=useState('buyer');const[loading,setLoading]=useState(false);const[error,setError]=useState('');const handleSubmit=async(e)=>{e.preventDefault();setLoading(true);setError('');const formData=new FormData(e.currentTarget);const data=Object.fromEntries(formData);const res=await signIn('credentials',{...data,role,redirect:false,});if(res?.error){setError(res.error);}else{router.push(role==='seller'?'/dashboard':'/products');}setLoading(false);};return(<div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8"><div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg"><h1 className="text-2xl font-bold text-center mb-6">Register</h1><div className="flex gap-2 mb-4"><button type="button" onClick={()=>setRole('buyer')} className={`flex-1 p-2 rounded ${role==='buyer'?'bg-green-600 text-white':'bg-gray-200'}`}>Buyer</button><button type="button" onClick={()=>setRole('seller')} className={`flex-1 p-2 rounded ${role==='seller'?'bg-green-600 text-white':'bg-gray-200'}`}>Seller</button></div>{error&&<div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}<form onSubmit={handleSubmit} className="space-y-3"><input name="email" type="email" placeholder="Email" required className="w-full border p-2 rounded"/><input name="password" type="password" placeholder="Password" required className="w-full border p-2 rounded"/><input name="name" placeholder="Name" required className="w-full border p-2 rounded"/><input name="phone" placeholder="+254712345678" required className="w-full border p-2 rounded"/>{role==='seller'&&<><input name="businessName" placeholder="Business" required className="w-full border p-2 rounded"/><input name="location" placeholder="Location" required className="w-full border p-2 rounded"/></>}<button disabled={loading} className="w-full bg-green-600 text-white p-3 rounded">{loading?'Creating...':'Register'}</button></form><p className="mt-4 text-center text-sm"><a href="/auth/login" className="text-green-600">Login</a></p></div></div>);};export default function RegisterPage(){return(<SessionProvider><RegisterForm/></SessionProvider>);}
+// app/auth/register/page.tsx
+import { Suspense } from 'react';
+import { SessionProvider } from 'next-auth/react';
+import RegisterForm from './RegisterForm';
+
+export default function RegisterPage() {
+  return (
+    <SessionProvider>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        </div>
+      }>
+        <RegisterForm />
+      </Suspense>
+    </SessionProvider>
+  );
+}

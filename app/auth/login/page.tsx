@@ -1,1 +1,17 @@
-'use client';export const dynamic='force-dynamic';import{useState}from'react';import{useRouter,useSearchParams}from'next/navigation';import{signIn}from'next-auth/react';import{SessionProvider}from'next-auth/react';function LoginForm(){const router=useRouter();const searchParams=useSearchParams();const redirectRole=searchParams.get('role');const[loading,setLoading]=useState(false);const[error,setError]=useState('');const handleSubmit=async(e)=>{e.preventDefault();setLoading(true);setError('');const formData=new FormData(e.currentTarget);const res=await signIn('credentials',{email:formData.get('email'),password:formData.get('password'),redirect:false,});if(res?.error){setError(res.error);}else{router.push(redirectRole==='seller'?'/dashboard':'/products');}setLoading(false);};return(<div className="min-h-screen flex items-center justify-center bg-gray-50 px-4"><div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg"><h1 className="text-2xl font-bold text-center mb-6">Login</h1>{error&&<div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}<form onSubmit={handleSubmit} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input name="email" type="email" required className="w-full border p-2 rounded"/></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><input name="password" type="password" required className="w-full border p-2 rounded"/></div><button disabled={loading} className="w-full bg-green-600 text-white p-3 rounded">{loading?'Logging in...':'Login'}</button></form><p className="mt-4 text-center text-sm"><a href="/auth/register" className="text-green-600">Create Account</a></p></div></div>);};export default function LoginPage(){return(<SessionProvider><LoginForm/></SessionProvider>);}
+import { Suspense } from 'react';
+import { SessionProvider } from 'next-auth/react';
+import LoginForm from './LoginForm';
+
+export default function LoginPage() {
+  return (
+    <SessionProvider>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        </div>
+      }>
+        <LoginForm />
+      </Suspense>
+    </SessionProvider>
+  );
+}
