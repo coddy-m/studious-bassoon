@@ -2,16 +2,13 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
+import Providers from '@/components/Providers';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'MtaaDuka - Local Marketplace',
-  description: 'Buy and sell locally. Secure, fast, and M-Pesa enabled.',
-  icons: {
-    icon: '/icon.png',
-    apple: '/apple-icon.png',
-  },
+  title: 'MtaaDuka - Premium Marketplace',
+  description: 'Buy and sell with style. Secure, fast, and M-Pesa enabled.',
 };
 
 export default function RootLayout({
@@ -20,9 +17,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.className}>
-      <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
-        {children}
+    <html lang="en">
+      <body className={inter.className}>
+        {/* Animated Background */}
+        <div className="animated-bg" />
+        
+        <Providers>
+          <main className="relative z-10">
+            {children}
+          </main>
+        </Providers>
       </body>
     </html>
   );

@@ -6,15 +6,15 @@ export default withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl;
     const token = req.nextauth.token;
-    const role = token?.role;
+    const userRole = token?.role as string;
 
     // 🔒 Block buyers from seller dashboard
-    if (pathname.startsWith('/dashboard') && role !== 'seller') {
+    if (pathname.startsWith('/dashboard') && userRole !== 'seller') {
       return NextResponse.redirect(new URL('/auth/login?role=seller', req.url));
     }
 
-    // 🔒 Block unauthenticated users from checkout
-    if (pathname.startsWith('/checkout') && !token) {
+    // 🔒 Block unauthenticated users from dashboard
+    if (pathname.startsWith('/dashboard') && !token) {
       return NextResponse.redirect(new URL('/auth/login', req.url));
     }
   },
@@ -26,5 +26,5 @@ export default withAuth(
 );
 
 export const config = { 
-  matcher: ['/dashboard/:path*', '/checkout/:path*'] 
+  matcher: ['/dashboard/:path*'] 
 };
