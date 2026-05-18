@@ -24,8 +24,9 @@ export const authOptions: AuthOptions = {
         await connectDB();
         const clean = sanitizeUserInput(credentials);
 
-        // 📝 REGISTRATION FLOW (when name + phone are provided)
+        // 📝 REGISTRATION FLOW
         if (credentials?.name && credentials?.phone) {
+          console.log('📝 [AUTH] Registration attempt for:', clean.email);
           const existing = await User.findOne({ email: clean.email });
           if (existing) throw new Error('Email already registered');
 
@@ -45,29 +46,33 @@ export const authOptions: AuthOptions = {
             }),
           });
 
+          console.log('✅ [AUTH] User created with Role:', user.role);
           return { 
             id: user._id.toString(), 
             email: user.email, 
             role: user.role,
-            phone: user.phone 
+            phone: user.phone,
+            name: user.name 
           };
         }
 
-        // 🔑 LOGIN FLOW (email + password only)
-        if (!clean.email || !clean.password) {
-          throw new Error('Email and password required');
-        }
-
+        // 🔑 LOGIN FLOW
+        console.log('🔑 [AUTH] Login attempt for:', clean.email);
         const user = await User.findOne({ email: clean.email });
+        
         if (!user) throw new Error('User not found');
 
         const isValid = await user.comparePassword(clean.password);
         if (!isValid) throw new Error('Invalid password');
 
+        // 🔍 DEBUG: Check what role is in the database
+        console.log('✅ [AUTH] Login successful. User:', user.email, 'DB Role:', user.role);
+
         return { 
           id: user._id.toString(), 
           email: user.email, 
-          role: user.role,
+          // 🔑 CRITICAL: Use DB role, fallback to 'buyer' if missing
+          role: user.role || 'buyer', 
           phone: user.phone, 
           name: user.name 
         };
@@ -77,7 +82,6 @@ export const authOptions: AuthOptions = {
   session: { 
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60,
-    updateAge: 24 * 60 * 60,
   },
   cookies: {
     sessionToken: {
@@ -94,28 +98,21 @@ export const authOptions: AuthOptions = {
     secret: process.env.NEXTAUTH_SECRET,
     maxAge: 30 * 24 * 60 * 60,
   },
-  // ✅ CRITICAL: JWT Callback - Stores role in token
   callbacks: {
-    async jwt({ token, user, trigger, session }: { token: JWT; user: any; trigger?: string; session?: any }) {
-      // On sign in, add user data to token
+    async jwt({ token, user }: { token: JWT; user: any }) {
+      // When logging in, 'user' is available. Update token.
       if (user) {
+        console.log('🎫 [JWT] Setting token role to:', user.role);
         token.role = user.role;
         token.phone = user.phone;
         token.email = user.email;
         token.name = user.name;
-        token.iat = Math.floor(Date.now() / 1000);
       }
-      
-      // Handle session updates (e.g., role change)
-      if (trigger === 'update' && session?.role) {
-        token.role = session.role;
-      }
-      
       return token;
     },
-    // ✅ CRITICAL: Session Callback - Exposes role to client
     async session({ session, token }: { session: any; token: JWT }) {
       if (session.user) {
+        console.log('👤 [SESSION] Setting session role to:', token.role);
         session.user.id = token.sub as string;
         session.user.role = token.role as 'buyer' | 'seller';
         session.user.phone = token.phone as string;
