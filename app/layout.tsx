@@ -2,7 +2,8 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
-import Providers from '@/components/Providers';
+import Navbar from '@/components/Navbar';
+import Providers from '@/components/Providers'; // If you have this
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,10 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {/* Animated Background */}
         <div className="animated-bg" />
-        
-        <Providers>
+        <Providers> {/* Remove if not using */}
+          <Navbar />
           <main className="relative z-10">
             {children}
           </main>

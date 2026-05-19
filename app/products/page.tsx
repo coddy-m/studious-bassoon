@@ -1,12 +1,17 @@
 // app/products/page.tsx
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-options';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ProductsPage() {
   let products: any[] = [];
+  const session = await getServerSession(authOptions);
+  const isSeller = session?.user?.role === 'seller';
+  
   try {
     await connectDB();
     products = await Product.find({ active: true }).sort({ createdAt: -1 }).limit(20).lean();
@@ -16,20 +21,49 @@ export default async function ProductsPage() {
 
   return (
     <div className="min-h-screen py-20 px-4">
-      {/* Hero Section */}
-      <div className="max-w-6xl mx-auto mb-16 text-center fade-in-up">
-        <h1 className="text-6xl md:text-8xl font-bold mb-6 text-gradient-gold text-shadow-lg">
-          MtaaDuka
-        </h1>
-        <p className="text-2xl text-gray-300 mb-8">
-          Discover Amazing Products
-        </p>
-        <div className="w-32 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full" />
+      {/* Header with Conditional Seller Dashboard Link */}
+      <div className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-5xl md:text-7xl font-bold mb-2 text-gradient text-shadow-lg">
+            MtaaDuka
+          </h1>
+          <p className="text-xl text-gray-300">Discover Amazing Products</p>
+        </div>
+        
+        {/* ✅ Seller Dashboard Link - Only shows for sellers */}
+        <div className="flex items-center gap-4">
+          {isSeller ? (
+            <Link 
+              href="/dashboard" 
+              className="btn-dramatic px-6 py-3 rounded-xl font-semibold flex items-center gap-2"
+            >
+              🏪 Seller Dashboard
+            </Link>
+          ) : session?.user ? (
+            // Show buyer profile link if logged in as buyer
+            <span className="text-gray-400 text-sm">
+              Welcome, {session.user.name}
+            </span>
+          ) : (
+            // Show login link for guests
+            <Link 
+              href="/auth/login" 
+              className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+            >
+              Sign In
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="max-w-7xl mx-auto mb-12">
+        <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       </div>
 
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {products.map((product: any, index: number) => (
             <Link 
               key={product._id} 
@@ -38,7 +72,7 @@ export default async function ProductsPage() {
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="product-card-dramatic h-full">
-                <div className="relative h-64 overflow-hidden">
+                <div className="relative h-56 overflow-hidden">
                   {product.images?.[0] ? (
                     <img 
                       src={product.images[0]} 
@@ -46,43 +80,38 @@ export default async function ProductsPage() {
                       className="product-image w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                      <span className="text-6xl">📦</span>
+                    <div className="w-full h-full bg-gradient-to-br from-gray-600/30 to-gray-700/30 flex items-center justify-center">
+                      <span className="text-5xl">📦</span>
                     </div>
                   )}
-                  {product.stock < 10 && (
-                    <div className="absolute top-4 right-4 badge-dramatic">
-                      Only {product.stock} left!
+                  {product.stock < 10 && product.stock > 0 && (
+                    <div className="absolute top-3 right-3 badge-dramatic">
+                      Only {product.stock} left
                     </div>
                   )}
                 </div>
                 
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-white mb-2 line-clamp-2">
+                <div className="p-5">
+                  <h3 className="text-lg font-semibold text-white mb-2 line-clamp-2">
                     {product.name}
                   </h3>
                   <p className="text-gray-400 text-sm mb-3 capitalize">
                     {product.category}
                   </p>
                   <div className="flex items-center justify-between">
-                    <span className="text-3xl font-bold text-gradient">
+                    <span className="text-2xl font-bold text-white">
                       KES {product.price?.toLocaleString()}
                     </span>
                     {product.stock > 0 ? (
-                      <span className="text-green-400 text-sm font-semibold">
+                      <span className="text-green-400 text-xs font-semibold">
                         In Stock
                       </span>
                     ) : (
-                      <span className="text-red-400 text-sm font-semibold">
+                      <span className="text-red-400 text-xs font-semibold">
                         Out of Stock
                       </span>
                     )}
                   </div>
-                </div>
-
-                {/* Hover Glow Effect */}
-                <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-t from-purple-600/20 to-transparent" />
                 </div>
               </div>
             </Link>
@@ -91,17 +120,10 @@ export default async function ProductsPage() {
 
         {products.length === 0 && (
           <div className="text-center py-20">
-            <div className="text-8xl mb-6 float-animation">🛍️</div>
-            <p className="text-2xl text-gray-300">No products yet. Check back soon!</p>
+            <div className="text-6xl mb-4 float-animation">🛍️</div>
+            <p className="text-xl text-gray-300">No products yet. Check back soon!</p>
           </div>
         )}
-      </div>
-
-      {/* Wave Decoration */}
-      <div className="wave-bg mt-20">
-        <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" className="shape-fill"></path>
-        </svg>
       </div>
     </div>
   );
